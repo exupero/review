@@ -78,14 +78,13 @@
 
 (rf/reg-event-db ::add-top-level-comment
   (fn [db [_ id s]]
-    (prn id s)
-    (if (and id s)
+    (if (and id s (not (string/blank? s)))
       (update-in db [:comments [nil nil nil]] (fnil conj []) {:id id :comment s :new? true})
       db)))
 
 (rf/reg-event-db ::add-comment
   (fn [db [_ id s]]
-    (if (and id s)
+    (if (and id s (not (string/blank? s)))
       (update db :comments (partial walk/postwalk (fn [n]
                                                     (if (and (map? n) (= id (n :id)))
                                                       (-> n

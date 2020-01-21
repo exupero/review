@@ -13,8 +13,11 @@
          :question 0x2753
          :recycle 0x267b
          :slight_smile 0x1f642
+         :sparkles 0x2728
          :thumbsup 0x1f44d
          :white_check_mark 0x2705
+         :wink 0x1f609
+         :x 0x274c
          }))
 
 (defn emojify [s]
@@ -55,6 +58,7 @@
                                      (and (= "added" typ) (java? to) (re-find #"\.size\(\)\s+==\s+0\b" line)) (conj "Maybe use `.isEmpty()`?")
                                      (and (= "added" typ) (javascript? to) (re-find #"\.length\s+===?\s+0\b" line)) (conj "Maybe use `_.isEmpty()`?")
                                      (and (= "added" typ) (javascript? to) (re-find #"import \* as " line)) (conj "Don't use `import * as`?")
+                                     (and (= "added" typ) (javascript? to) (re-find #"@debug" line)) (conj "Leftover `@debug`")
                                      )]
               :when (seq comments)]
           [[(or from to) old-line new-line]

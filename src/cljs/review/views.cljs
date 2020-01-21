@@ -117,25 +117,22 @@
                   :on-click #(rf/dispatch [::events/add-inline-comment file [old-line new-line]])}
                  [:td.diff__line-number old-line]
                  [:td.diff__line-number new-line]])]]
-     [:div.full-width.diff__column.diff__code (for [[i {t :type :keys [line segments]}] (map-indexed vector lines)]
-                                                [:div.diff__cell.diff__cell--code {:key i :class t}
-                                                 [:pre.flex-stretch
-                                                  [:code
-                                                   {:class highlight-syntax
-                                                    :ref (fn [n]
-                                                           ; super slow to highlight on every line of the diff...
-                                                           ; need to get better at chunking code for highlight
-                                                           #_(when n
-                                                             (hl/highlightBlock n)))}
-                                                   (if segments
-                                                     [:span.flex (for [[i {:keys [value added removed]}] (map-indexed vector segments)]
-                                                                   [:span.diff__segment
-                                                                    {:key i
-                                                                     :class (classes
-                                                                              (when added :added-highlight)
-                                                                              (when removed :removed-highlight))}
-                                                                    value])]
-                                                     line)]]])]]))
+     [:div.full-width.diff__column.diff__code
+      [:pre
+       [:code {:class highlight-syntax
+               :ref (fn [n]
+                      (when n (js/setTimeout #(hl/highlightBlock n) 0)))}
+        (for [[i {t :type :keys [line segments]}] (map-indexed vector lines)]
+          [:div.diff__cell.diff__cell--code {:key i :class t}
+           (if segments
+             [:span.flex (for [[i {:keys [value added removed]}] (map-indexed vector segments)]
+                           [:span.diff__segment
+                            {:key i
+                             :class (classes
+                                      (when added :added-highlight)
+                                      (when removed :removed-highlight))}
+                            value])]
+             line)])]]]]))
 
 (defn review-comment-with-context [{{:keys [path]} :inline :keys [id context] :as cmt}]
   [:div {:key id}

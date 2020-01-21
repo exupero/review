@@ -101,20 +101,34 @@
   (fn [[{:keys [description]} accounts]]
     (some-> description marked util/emojify (inline-accounts accounts))))
 
-(defn diff-line-pair [removed added]
-  (let [char-segments (diff/diffChars removed added)
+(defn diff-lines [removed-lines added-lines]
+  (let [removed (string/join "\n" (map :line removed-lines))
+        added (string/join "\n" (map :line added-lines))
+        char-segments (diff/diffChars removed added)
         word-segments (diff/diffWords removed added)
-        segments (js->clj (min-key count word-segments char-segments) :keywordize-keys true)]
-    [(sequence
-        (comp
-          (remove :added)
-          (map #(dissoc % :count :added)))
-        segments)
-     (sequence
-       (comp
-         (remove :removed)
-         (map #(dissoc % :count :removed)))
-       segments)]))
+        segments (js->clj (min-key count word-segments char-segments) :keywordize-keys true)
+        split-with-newlines #(interpose "\n" (string/split % #"\n"))
+        newline? (comp #{"\n"} :value)]
+    {:removed (sequence
+                (comp
+                  (remove :added)
+                  (map #(dissoc % :count :added))
+                  (mapcat (fn [{:keys [value] :as segment}]
+                            (map #(assoc segment :value %)
+                                 (split-with-newlines value))))
+                  (partition-by newline?)
+                  (remove (comp newline? first)))
+                segments)
+     :added (sequence
+              (comp
+                (remove :removed)
+                (map #(dissoc % :count :removed))
+                (mapcat (fn [{:keys [value] :as segment}]
+                          (map #(assoc segment :value %)
+                               (split-with-newlines value))))
+                (partition-by newline?)
+                (remove (comp newline? first)))
+              segments)}))
 
 (rf/reg-sub ::mutations
   (fn []
@@ -127,17 +141,21 @@
                     (comp
                       (partition-by (comp #{"unchanged"} :type))
                       (filter (fn [lines]
-                                (and (-> lines first :type (not= "unchanged"))
-                                     (let [{:strs [removed added]} (group-by :type lines)]
-                                       (= (count removed) (count added))))))
+                                (-> lines first :type (not= "unchanged"))))
                       (map (fn [lines]
                              (let [{:strs [removed added]} (group-by :type lines)]
-                               (apply merge
-                                      (map (fn [{removed :line :keys [old-line]} {added :line :keys [new-line]}]
-                                             (let [[removed-segments added-segments] (diff-line-pair removed added)]
-                                               {[from i old-line removed] removed-segments
-                                                [to i new-line added] added-segments}))
-                                           removed added))))))
+                               (when (and (seq removed) (seq added))
+                                 (let [{removed' :removed added' :added} (diff-lines removed added)]
+                                   (merge
+                                     (into {}
+                                           (map (fn [{:keys [old-line line]} segments]
+                                                  [[from i old-line line] segments])
+                                                removed removed'))
+                                     (into {}
+                                           (map (fn [{:keys [new-line line]} segments]
+                                                  [[to i new-line line] segments])
+                                                added added'))))))))
+                      (remove nil?))
                     chnk)]
             m))))
 
