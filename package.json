@@ -5,7 +5,7 @@
   "dependencies": {
     "create-react-class": "15.6.3",
     "diff": "^4.0.1",
-    "highlight.js": "^9.17.1",
+    "highlight.js": "^10.1.2",
     "marked": "^0.8.0",
     "react": "16.8.6",
     "react-dom": "16.8.6"
